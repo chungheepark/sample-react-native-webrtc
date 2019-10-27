@@ -1,13 +1,6 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow
- */
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  Button,
   SafeAreaView,
   StyleSheet,
   ScrollView,
@@ -24,91 +17,150 @@ import {
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 
+import {
+  RTCPeerConnection,
+  RTCIceCandidate,
+  RTCSessionDescription,
+  RTCView,
+  MediaStream,
+  MediaStreamTrack,
+  mediaDevices,
+  registerGlobals
+} from 'react-native-webrtc';
+
 const App: () => React$Node = () => {
+
+  const [localStream, setLocalStream] = useState(null);
+  
+  const [remoteStream1, setRemoteStream1] = useState(null);
+  const [remoteStream2, setRemoteStream2] = useState(null);
+
+  useEffect(() => {
+
+    async function getUserMediaAndConnect() {
+      const stream = await getUserMedia();
+      setLocalStream(stream);
+      connect1(stream);
+      connect2(stream);
+    }
+
+    async function getUserMedia() {
+      return mediaDevices.getUserMedia({
+        audio: true,
+        video: {
+          facingMode: "user"
+        }
+      });
+    }
+
+    async function connect1(stream) {
+      const localPC1 = new RTCPeerConnection();
+      localPC1.addStream(stream);
+
+      const remotePC1 = new RTCPeerConnection();
+      localPC1.onicecandidate = event => event.candidate === null
+        ? console.log('local peer 1 candidate gathering ended')
+        : console.log(event.candidate, remotePC1.addIceCandidate(event.candidate));
+      
+      remotePC1.onicecandidate = event => event.candidate === null
+      ? console.log('remote peer 1 candidate gathering ended')
+      : console.log(event.candidate, localPC1.addIceCandidate(event.candidate));
+
+      remotePC1.onaddstream = event => {
+        console.log('remotePC1.onaddstream:', event);
+        setRemoteStream1(event.stream);
+      }
+      
+      const offer = await localPC1.createOffer();
+      await remotePC1.setRemoteDescription(offer);
+      const answer = await remotePC1.createAnswer();
+      await localPC1.setLocalDescription(offer);
+      await localPC1.setRemoteDescription(answer);
+      await remotePC1.setLocalDescription(answer);
+    }
+
+    async function connect2(stream) {
+      const localPC2 = new RTCPeerConnection();
+      localPC2.addStream(stream);
+
+      const remotePC2 = new RTCPeerConnection();
+      localPC2.onicecandidate = event => event.candidate === null
+        ? console.log('local peer 1 candidate gathering ended')
+        : console.log(event.candidate, remotePC2.addIceCandidate(event.candidate));
+      
+        remotePC2.onicecandidate = event => event.candidate === null
+      ? console.log('remotePC2 candidate gathering ended')
+      : console.log(event.candidate, localPC2.addIceCandidate(event.candidate));
+
+      remotePC2.onaddstream = event => {
+        console.log('remotePC2.onaddstream:', event);
+        setRemoteStream2(event.stream);
+      }
+      
+      const offer = await localPC2.createOffer();
+      await remotePC2.setRemoteDescription(offer);
+      const answer = await remotePC2.createAnswer();
+      await localPC2.setLocalDescription(offer);
+      await localPC2.setRemoteDescription(answer);
+      await remotePC2.setLocalDescription(answer);
+    }
+
+    getUserMediaAndConnect();
+  }, [])
+
   return (
     <>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView>
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          style={styles.scrollView}>
-          <Header />
-          {global.HermesInternal == null ? null : (
-            <View style={styles.engine}>
-              <Text style={styles.footer}>Engine: Hermes</Text>
-            </View>
-          )}
-          <View style={styles.body}>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Step One</Text>
-              <Text style={styles.sectionDescription}>
-                Edit <Text style={styles.highlight}>App.js</Text> to change this
-                screen and then come back to see your edits.
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>See Your Changes</Text>
-              <Text style={styles.sectionDescription}>
-                <ReloadInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Debug</Text>
-              <Text style={styles.sectionDescription}>
-                <DebugInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Learn More</Text>
-              <Text style={styles.sectionDescription}>
-                Read the docs to discover what to do next:
-              </Text>
-            </View>
-            <LearnMoreLinks />
+      <View style={{ flex: 1 }}>
+        <View style={{ backgroundColor: '#FFAAAA', flex: 1 }}>
+          {localStream !== null
+            ? <RTCView
+              streamURL={localStream.toURL()}
+              mirror={true}
+              style={{
+                // position: 'absolute',
+                zIndex: 0,
+                width: '100%',
+                height: '100%'
+              }}
+              objectFit='cover'
+            />
+            : <Text>Local</Text>}
+        </View>
+        <View style={{ flexDirection: 'row', flex: 1 }}>
+          <View style={{ backgroundColor: '#FFAA00', flex: 1 }}>
+            {remoteStream1 !== null
+              ? <RTCView
+                streamURL={remoteStream1.toURL()}
+                mirror={true}
+                style={{
+                  // position: 'absolute',
+                  zIndex: 0,
+                  width: '100%',
+                  height: '100%'
+                }}
+                objectFit='cover'
+              />
+              : <Text>RemoteStrem1</Text>}
           </View>
-        </ScrollView>
-      </SafeAreaView>
+          <View style={{ backgroundColor: '#00AAAA', flex: 1 }}>
+          {remoteStream2 !== null
+              ? <RTCView
+                streamURL={remoteStream2.toURL()}
+                mirror={true}
+                style={{
+                  // position: 'absolute',
+                  zIndex: 0,
+                  width: '100%',
+                  height: '100%'
+                }}
+                objectFit='cover'
+              />
+              : <Text>RemoteStrem2</Text>}
+          </View>
+        </View>
+      </View>
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollView: {
-    backgroundColor: Colors.lighter,
-  },
-  engine: {
-    position: 'absolute',
-    right: 0,
-  },
-  body: {
-    backgroundColor: Colors.white,
-  },
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.black,
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-    color: Colors.dark,
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-  footer: {
-    color: Colors.dark,
-    fontSize: 12,
-    fontWeight: '600',
-    padding: 4,
-    paddingRight: 12,
-    textAlign: 'right',
-  },
-});
 
 export default App;
