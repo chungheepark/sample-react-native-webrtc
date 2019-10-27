@@ -26,7 +26,6 @@
 2. Step4 부터 진행했음.
 3. framework는 추가 안하고 `libc.tbd`, `libc++.tbd`, `libsqlite3.tbd` 파일만 추가했음.
 4. permission 추가
-5. Project -> Build Settings -> Build Options -> Enable Bitcode : No
 
 ios 권한: info.plist
 
@@ -36,6 +35,10 @@ ios 권한: info.plist
 <key>NSMicrophoneUsageDescription</key>
 <string>Microphone Permission</string>
 ```
+
+5. Bitcode 뭐시기 막 에러 발생했었음.
+
+해결: Project -> Build Settings -> Build Options -> Enable Bitcode : No
 
 ### Android
 
